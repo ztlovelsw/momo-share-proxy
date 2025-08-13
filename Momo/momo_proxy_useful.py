@@ -63,33 +63,63 @@ class MY_GUI():
     #功能函数
     def str_trans_to_md5(self):
         share_url = self.init_data_Text.get(0.0, END).strip().replace("\n", "")
-        # print("src =", share_url, '\n', share_url[0:23])
+        print(f"DEBUG: 输入的分享链接: {share_url}")
+        
         momo_url = 'https://www.maimemo.com'
         suc_num = 0
+        
         if share_url[0:23] == momo_url:
             self.progressbarOne['value'] = 0
-            self.write_log_to_Text("正在运行")
+            self.write_log_to_Text("INFO: 开始运行任务...")
+            print("DEBUG: 分享链接验证通过，开始运行")
+            
             try:
                 for i in range(35):
+                    print(f"DEBUG: 第 {i+1}/35 次循环")
+                    
                     if i != 0:
-                        time.sleep(random.randint(60, 120))
-                    #换成自己的代理
-                    proxies = self.jl_api('写自己的代码url')
-                    suc_num = self.run(share_url, suc_num, proxies)
-
+                        sleep_time = random.randint(60, 120)
+                        print(f"DEBUG: 等待 {sleep_time} 秒...")
+                        time.sleep(sleep_time)
+                    
+                    # 使用新的代理API格式
+                    proxy_api_url = 'http://bapi.51daili.com/getapi2?linePoolIndex=-1&packid=2&time=1&qty=1&port=1&format=txt&dt=2&dtc=1&usertype=17&uid=59521'
+                    print(f"DEBUG: 请求代理API: {proxy_api_url}")
+                    
+                    proxies = self.jl_api(proxy_api_url)
+                    
+                    if proxies is None:
+                        self.write_log_to_Text(f"WARNING: 第{i+1}次 - 获取代理失败，跳过本次")
+                        print(f"DEBUG: 第{i+1}次 - 代理获取失败")
+                        self.progressbarOne['value'] += 1
+                        self.init_window_name.update()
+                        continue
+                    
+                    print(f"DEBUG: 使用代理: {proxies}")
+                    result = self.run(share_url, suc_num, proxies)
+                    
+                    if result is not None:
+                        suc_num = result
+                        print(f"DEBUG: 第{i+1}次 - 成功，当前成功次数: {suc_num}")
+                    else:
+                        print(f"DEBUG: 第{i+1}次 - 失败")
+                    
                     self.progressbarOne['value'] += 1
                     self.init_window_name.update()
-                    self.write_log_to_Text("正在运行,已成功{}次".format(suc_num))
+                    self.write_log_to_Text("INFO: 进度 {}/35, 已成功{}次".format(i+1, suc_num))
+                    
                     if i == 34:
-                        self.write_log_to_Text("任务完成，成功{}次".format(suc_num))
-                #输出到界面
-                # self.result_data_Text.delete(1.0,END)
-                # self.result_data_Text.insert(1.0,myMd5_Digest)
-                # self.write_log_to_Text("INFO:str_trans_to_md5 success")
-            except:
-                self.write_log_to_Text("无效")
+                        self.write_log_to_Text("SUCCESS: 任务完成，总共成功{}次".format(suc_num))
+                        print("DEBUG: 任务完成")
+                        
+            except Exception as e:
+                error_msg = f"ERROR: 运行过程中发生异常: {str(e)}"
+                print(error_msg)
+                self.write_log_to_Text(error_msg)
         else:
-            self.write_log_to_Text("无效的分享链接")
+            error_msg = "ERROR: 无效的分享链接，请检查链接格式"
+            print(f"DEBUG: {error_msg}")
+            self.write_log_to_Text(error_msg)
 
     #获取当前时间
     def get_current_time(self):
@@ -120,26 +150,76 @@ class MY_GUI():
     #     # print(proxies)
     #     return proxies
     def jl_api(self, api_url):
-        # 获取API接口返回的代理IP
-        proxy_ip = requests.get(api_url).text
-        # 代理服务器
-        proxyHost = proxy_ip.split(":")[0]
-        proxyPort = proxy_ip.split(":")[1]
-
-        print(proxy_ip)
-        # 用户名密码认证(动态代理/独享代理)
-        proxyMeta = "http://%(host)s:%(port)s" % {
-            "host": proxyHost,
-            "port": proxyPort,
-        }
-        proxies = {
-            "http": proxyMeta,
-        }
-        # print(proxies)
-        return proxies
+        """获取代理IP并构建代理配置"""
+        try:
+            self.write_log_to_Text("INFO: 正在获取代理IP...")
+            print(f"DEBUG: 请求代理API: {api_url}")
+            
+            # 获取API接口返回的代理IP
+            response = requests.get(api_url, timeout=10)
+            response.raise_for_status()
+            
+            proxy_ip = response.text.strip()
+            print(f"DEBUG: 获取到的代理IP: {proxy_ip}")
+            
+            if not proxy_ip:
+                raise ValueError("获取到的代理IP为空")
+            
+            # 验证代理IP格式
+            if ":" not in proxy_ip:
+                raise ValueError(f"代理IP格式错误: {proxy_ip}")
+            
+            # 解析代理服务器
+            proxy_parts = proxy_ip.split(":")
+            if len(proxy_parts) != 2:
+                raise ValueError(f"代理IP格式不正确: {proxy_ip}")
+                
+            proxyHost = proxy_parts[0]
+            proxyPort = proxy_parts[1]
+            
+            # 验证端口是否为数字
+            try:
+                int(proxyPort)
+            except ValueError:
+                raise ValueError(f"代理端口格式错误: {proxyPort}")
+            
+            # 构建代理配置
+            proxyMeta = f"http://{proxyHost}:{proxyPort}"
+            proxies = {
+                "http": proxyMeta,
+                "https": proxyMeta  # 添加https支持
+            }
+            
+            print(f"DEBUG: 代理配置: {proxies}")
+            self.write_log_to_Text(f"INFO: 成功获取代理: {proxy_ip}")
+            return proxies
+            
+        except requests.exceptions.Timeout:
+            error_msg = "ERROR: 获取代理超时"
+            print(error_msg)
+            self.write_log_to_Text(error_msg)
+            return None
+            
+        except requests.exceptions.RequestException as e:
+            error_msg = f"ERROR: 请求代理API失败: {str(e)}"
+            print(error_msg)
+            self.write_log_to_Text(error_msg)
+            return None
+            
+        except ValueError as e:
+            error_msg = f"ERROR: 代理格式错误: {str(e)}"
+            print(error_msg)
+            self.write_log_to_Text(error_msg)
+            return None
+            
+        except Exception as e:
+            error_msg = f"ERROR: 获取代理时发生未知错误: {str(e)}"
+            print(error_msg)
+            self.write_log_to_Text(error_msg)
+            return None
 
     def run(self, url_ls, suc_num, proxies):
-
+        """执行请求并验证结果"""
         headers = {
             'authority': 'www.maimemo.com',
             'Proxy-Authorization': 'Basic ZDI0MjkxNjczNzU6bGM1ZjJ4cDQ=',
@@ -157,19 +237,65 @@ class MY_GUI():
             'upgrade-insecure-requests': '1',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
         }
-        num = 1
-        requests.DEFAULT_RETRIES = 10
+        
+        print(f"DEBUG: 开始请求URL: {url_ls}")
+        print(f"DEBUG: 使用代理: {proxies}")
+        
         try:
-            response = requests.get(url=url_ls, headers=headers, proxies=proxies)
-        except Exception as e:
-            print("http exception:", e)
-            suc_num += 0
-            return suc_num
-        else:
+            # 设置重试次数
+            requests.DEFAULT_RETRIES = 5
+            session = requests.Session()
+            session.keep_alive = False
+            
+            response = requests.get(
+                url=url_ls,
+                headers=headers,
+                proxies=proxies,
+                timeout=15,
+                verify=False
+            )
+            
+            print(f"DEBUG: 响应状态码: {response.status_code}")
+            print(f"DEBUG: 响应头: {dict(response.headers)}")
+            
+            if response.status_code != 200:
+                print(f"WARNING: 非200状态码: {response.status_code}")
+                return suc_num
+            
             content = response.text
-            if (str(content).find("学习天数")) != -1:
+            content_length = len(content)
+            print(f"DEBUG: 响应内容长度: {content_length}")
+            
+            # 检查是否包含目标关键词
+            if "学习天数" in content:
+                print("DEBUG: 成功找到'学习天数'关键词")
                 suc_num += 1
                 return suc_num
+            else:
+                print("DEBUG: 未找到'学习天数'关键词")
+                # 打印部分内容用于调试
+                if content_length > 200:
+                    preview = content[:200] + "..."
+                else:
+                    preview = content
+                print(f"DEBUG: 内容预览: {preview}")
+                return suc_num
+                
+        except requests.exceptions.Timeout:
+            print("ERROR: 请求超时")
+            return suc_num
+            
+        except requests.exceptions.ProxyError as e:
+            print(f"ERROR: 代理错误: {str(e)}")
+            return suc_num
+            
+        except requests.exceptions.ConnectionError as e:
+            print(f"ERROR: 连接错误: {str(e)}")
+            return suc_num
+            
+        except Exception as e:
+            print(f"ERROR: 请求过程中发生未知错误: {str(e)}")
+            return suc_num
 def gui_start():
     init_window = Tk()              #实例化出一个父窗口
     ZMJ_PORTAL = MY_GUI(init_window)
