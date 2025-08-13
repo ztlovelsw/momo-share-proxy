@@ -5,6 +5,7 @@ import tkinter
 from tkinter import *
 import hashlib
 import time
+import socket
 from tkinter.ttk import Progressbar
 
 import requests
@@ -73,6 +74,12 @@ class MY_GUI():
             self.write_log_to_Text("INFO: 开始运行任务...")
             print("DEBUG: 分享链接验证通过，开始运行")
             
+            # 自动添加IP到白名单
+            self.write_log_to_Text("INFO: 正在自动添加IP到白名单...")
+            white_result = self.add_white_ip()
+            if not white_result:
+                self.write_log_to_Text("WARNING: IP白名单添加失败，可能不影响使用")
+            
             try:
                 for i in range(35):
                     print(f"DEBUG: 第 {i+1}/35 次循环")
@@ -125,6 +132,7 @@ class MY_GUI():
     def get_current_time(self):
         current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
         return current_time
+        
     def write_log_to_Text(self,logmsg):
         global LOG_LINE_NUM
         current_time = self.get_current_time()
@@ -135,6 +143,83 @@ class MY_GUI():
         else:
             self.log_data_Text.delete(1.0,2.0)
             self.log_data_Text.insert(END, logmsg_in)
+
+    def get_local_ip(self):
+        """获取本地公网IP地址"""
+        try:
+            # 使用多个IP检测服务提高可靠性
+            ip_services = [
+                'http://httpbin.org/ip',
+                'https://api.ipify.org',
+                'http://icanhazip.com'
+            ]
+            
+            for service in ip_services:
+                try:
+                    response = requests.get(service, timeout=5)
+                    if response.status_code == 200:
+                        ip = response.text.strip()
+                        # 处理httpbin.org的JSON格式
+                        if 'origin' in ip:
+                            import json
+                            ip = json.loads(ip)['origin']
+                        return ip
+                except:
+                    continue
+                    
+            # 如果都失败，尝试获取本地IP
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                s.connect(('8.8.8.8', 80))
+                ip = s.getsockname()[0]
+            finally:
+                s.close()
+            return ip
+            
+        except Exception as e:
+            print(f"ERROR: 获取IP地址失败: {str(e)}")
+            return None
+
+    def add_white_ip(self):
+        """自动添加当前IP到白名单"""
+        try:
+            self.write_log_to_Text("INFO: 正在获取本地IP...")
+            local_ip = self.get_local_ip()
+            
+            if not local_ip:
+                self.write_log_to_Text("ERROR: 无法获取本地IP地址")
+                return False
+            
+            self.write_log_to_Text(f"INFO: 检测到本地IP: {local_ip}")
+            
+            # 构建白名单API URL
+            white_api = f"http://aapi.51daili.com/whiteIP-list?op=add&appkey=DAD44680B293374839DCE7B55FADEB5259521&whiteip={local_ip}"
+            print(f"DEBUG: 白名单API: {white_api}")
+            
+            response = requests.get(white_api, timeout=10)
+            response.raise_for_status()
+            
+            result = response.text.strip()
+            print(f"DEBUG: 白名单API返回: {result}")
+            
+            if "success" in result.lower() or "ok" in result.lower():
+                self.write_log_to_Text(f"SUCCESS: IP白名单添加成功: {local_ip}")
+                return True
+            else:
+                self.write_log_to_Text(f"WARNING: IP白名单添加结果: {result}")
+                return False
+                
+        except requests.exceptions.Timeout:
+            self.write_log_to_Text("ERROR: 添加白名单超时")
+            return False
+            
+        except requests.exceptions.RequestException as e:
+            self.write_log_to_Text(f"ERROR: 添加白名单请求失败: {str(e)}")
+            return False
+            
+        except Exception as e:
+            self.write_log_to_Text(f"ERROR: 添加白名单时发生错误: {str(e)}")
+            return False
 
     # def jl_api(self, api_url):
     #     # 获取API接口返回的代理IP
