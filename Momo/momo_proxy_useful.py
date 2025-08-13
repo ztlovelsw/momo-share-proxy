@@ -34,45 +34,164 @@ class MY_GUI():
 
     #设置窗口
     def set_init_window(self):
-        self.init_window_name.title("单词脚本_v1")           #窗口名
-        #self.init_window_name.geometry('320x160+10+10')                         #290 160为窗口大小，+10 +10 定义窗口弹出时的默认展示位置
-        self.init_window_name.geometry('500x240+10+10')
-        # self.init_window_name["bg"] = "white"                                    #窗口背景色，其他背景色见：blog.csdn.net/chl0000/article/details/7657887
-        #self.init_window_name.attributes("-alpha",0.9)                          #虚化，值越小虚化程度越高
-        #标签
-        self.init_data_label = Label(self.init_window_name, text="↓请在下方输入分享链接↓", width=70, anchor='center')
-        self.init_data_label.grid(row=0, column=0)
-        #文本框
-        self.init_data_Text = Text(self.init_window_name, width=70, height=3)  #原始数据录入框
-        self.init_data_Text.grid(row=1, column=0, rowspan=10, columnspan=10)
-        #按钮
-        self.str_trans_to_md5_button = Button(self.init_window_name, text="点击开始运行", bg="lightblue", width=10,
-                                              command=lambda: MyThread(self.str_trans_to_md5))  # 调用内部方法  加()为直接调用
-        self.str_trans_to_md5_button.grid(row=20, column=0)
-        #进度条
-        self.progressbarOne = Progressbar(self.init_window_name, length=400)
-        self.progressbarOne.grid(row=29, column=0)
-        self.progressbarOne['maximum'] = 35
+        self.init_window_name.title("Momo代理工具 v2.0")           #窗口名
+        self.init_window_name.geometry('600x400+100+100')
+        self.init_window_name.configure(bg='#f0f0f0')
+        
+        # 设置窗口图标和样式
+        try:
+            self.init_window_name.iconbitmap(default='')  # 可以添加图标路径
+        except:
+            pass
+            
+        # 主框架
+        main_frame = Frame(self.init_window_name, bg='#f0f0f0')
+        main_frame.pack(padx=20, pady=20, fill='both', expand=True)
+        
+        # 标题标签
+        title_label = Label(main_frame, text="Momo分享链接自动化工具",
+                           font=('Arial', 16, 'bold'), bg='#f0f0f0', fg='#2c3e50')
+        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
+        
+        # 分享链接输入区域
+        link_frame = LabelFrame(main_frame, text="分享链接", font=('Arial', 10, 'bold'),
+                               bg='#f0f0f0', padx=10, pady=10)
+        link_frame.grid(row=1, column=0, columnspan=2, sticky='ew', pady=(0, 10))
+        
+        self.init_data_label = Label(link_frame, text="请输入Momo分享链接：",
+                                   font=('Arial', 10), bg='#f0f0f0')
+        self.init_data_label.grid(row=0, column=0, sticky='w')
+        
+        self.init_data_Text = Text(link_frame, width=60, height=3, font=('Arial', 10),
+                                  relief='solid', borderwidth=1)
+        self.init_data_Text.grid(row=1, column=0, pady=(5, 0))
+        
+        # 配置参数区域
+        config_frame = LabelFrame(main_frame, text="运行配置", font=('Arial', 10, 'bold'),
+                                 bg='#f0f0f0', padx=10, pady=10)
+        config_frame.grid(row=2, column=0, columnspan=2, sticky='ew', pady=(0, 10))
+        
+        # 代理地址输入
+        Label(config_frame, text="代理地址：", font=('Arial', 10), bg='#f0f0f0').grid(row=0, column=0, sticky='w')
+        self.proxy_url_var = tkinter.StringVar(
+            value="http://bapi.51daili.com/getapi2?linePoolIndex=-1&packid=2&time=1&qty=1&port=1&format=txt&dt=2&dtc=1&usertype=17&uid=59521"
+        )
+        self.proxy_url_entry = Entry(config_frame, textvariable=self.proxy_url_var,
+                                   width=60, font=('Arial', 9), relief='solid', borderwidth=1)
+        self.proxy_url_entry.grid(row=0, column=1, padx=(10, 0), sticky='ew', columnspan=3)
+        
+        # 运行次数输入
+        Label(config_frame, text="运行次数：", font=('Arial', 10), bg='#f0f0f0').grid(row=1, column=0, sticky='w')
+        self.run_count_var = tkinter.StringVar(value="35")
+        self.run_count_entry = Entry(config_frame, textvariable=self.run_count_var,
+                                   width=10, font=('Arial', 10), relief='solid', borderwidth=1)
+        self.run_count_entry.grid(row=1, column=1, padx=(10, 0), sticky='w')
+        
+        # 配置网格权重
+        config_frame.grid_columnconfigure(1, weight=1)
+        
+        # 按钮区域
+        button_frame = Frame(main_frame, bg='#f0f0f0')
+        button_frame.grid(row=3, column=0, columnspan=2, pady=(0, 10))
+        
+        self.str_trans_to_md5_button = Button(button_frame, text="开始运行",
+                                            bg='#3498db', fg='white', font=('Arial', 12, 'bold'),
+                                            activebackground='#2980b9', activeforeground='white',
+                                            relief='raised', borderwidth=2, padx=20, pady=5,
+                                            command=lambda: MyThread(self.str_trans_to_md5))
+        self.str_trans_to_md5_button.pack(side='left', padx=(0, 10))
+        
+        # 白名单按钮
+        self.white_ip_button = Button(button_frame, text="添加IP白名单",
+                                    bg='#2ecc71', fg='white', font=('Arial', 10),
+                                    activebackground='#27ae60', activeforeground='white',
+                                    relief='raised', borderwidth=2, padx=10, pady=5,
+                                    command=self.add_white_ip)
+        self.white_ip_button.pack(side='left')
+        
+        # 进度区域
+        progress_frame = LabelFrame(main_frame, text="运行进度", font=('Arial', 10, 'bold'),
+                                   bg='#f0f0f0', padx=10, pady=10)
+        progress_frame.grid(row=4, column=0, columnspan=2, sticky='ew', pady=(0, 10))
+        
+        self.progressbarOne = Progressbar(progress_frame, length=500, mode='determinate',
+                                         style='Horizontal.TProgressbar')
+        self.progressbarOne.grid(row=0, column=0, sticky='ew', pady=(0, 5))
         self.progressbarOne['value'] = 0
-        # 进度标签
-        # self.progress_label = Label(self.init_window_name, anchor='center', width=5)
-        # self.progress_label.grid(row=29, column=0)
-        #日志
-        self.log_data_Text = Text(self.init_window_name, width=70, height=9)  # 日志框
-        self.log_data_Text.grid(row=31, column=0, columnspan=10)
-        self.log_data_Text.insert(END, '输出日志'+"\n")
+        
+        # 进度百分比标签
+        self.progress_label = Label(progress_frame, text="0%", font=('Arial', 9), bg='#f0f0f0')
+        self.progress_label.grid(row=0, column=1, padx=(10, 0))
+        
+        # 日志区域
+        log_frame = LabelFrame(main_frame, text="运行日志", font=('Arial', 10, 'bold'),
+                              bg='#f0f0f0', padx=10, pady=10)
+        log_frame.grid(row=5, column=0, columnspan=2, sticky='nsew', pady=(0, 10))
+        
+        self.log_data_Text = Text(log_frame, width=70, height=12, font=('Consolas', 9),
+                                 relief='solid', borderwidth=1)
+        self.log_data_Text.grid(row=0, column=0, sticky='nsew')
+        
+        # 滚动条
+        scrollbar = Scrollbar(log_frame, command=self.log_data_Text.yview)
+        scrollbar.grid(row=0, column=1, sticky='ns')
+        self.log_data_Text.config(yscrollcommand=scrollbar.set)
+        
+        # 配置网格权重
+        main_frame.grid_rowconfigure(5, weight=1)
+        main_frame.grid_columnconfigure(0, weight=1)
+        
+        # 初始日志
+        self.log_data_Text.insert(END, '系统初始化完成，准备就绪...\n')
+        
+        # 设置样式
+        try:
+            from tkinter import ttk
+            style = ttk.Style()
+            style.theme_use('clam')
+            style.configure('Horizontal.TProgressbar',
+                          background='#3498db',
+                          troughcolor='#ecf0f1',
+                          borderwidth=0,
+                          lightcolor='#3498db',
+                          darkcolor='#3498db')
+        except:
+            pass
     #功能函数
     def str_trans_to_md5(self):
         share_url = self.init_data_Text.get(0.0, END).strip().replace("\n", "")
         print(f"DEBUG: 输入的分享链接: {share_url}")
+        
+        # 获取代理地址
+        proxy_api_url = self.proxy_url_var.get().strip()
+        if not proxy_api_url:
+            self.write_log_to_Text("ERROR: 请输入代理地址")
+            return
+        
+        # 获取运行次数
+        try:
+            run_count = int(self.run_count_var.get())
+            if run_count <= 0 or run_count > 1000:
+                self.write_log_to_Text("ERROR: 运行次数必须在1-1000之间")
+                return
+        except ValueError:
+            self.write_log_to_Text("ERROR: 请输入有效的运行次数")
+            return
         
         momo_url = 'https://www.maimemo.com'
         suc_num = 0
         
         if share_url[0:23] == momo_url:
             self.progressbarOne['value'] = 0
-            self.write_log_to_Text("INFO: 开始运行任务...")
-            print("DEBUG: 分享链接验证通过，开始运行")
+            self.progressbarOne['maximum'] = run_count
+            self.progress_label.config(text="0%")
+            self.write_log_to_Text(f"INFO: 开始运行任务，共{run_count}次...")
+            self.write_log_to_Text(f"INFO: 使用代理地址: {proxy_api_url}")
+            print(f"DEBUG: 分享链接验证通过，开始运行{run_count}次")
+            
+            # 禁用按钮防止重复点击
+            self.str_trans_to_md5_button.config(state='disabled')
+            self.white_ip_button.config(state='disabled')
             
             # 自动添加IP到白名单
             self.write_log_to_Text("INFO: 正在自动添加IP到白名单...")
@@ -81,16 +200,17 @@ class MY_GUI():
                 self.write_log_to_Text("WARNING: IP白名单添加失败，可能不影响使用")
             
             try:
-                for i in range(35):
-                    print(f"DEBUG: 第 {i+1}/35 次循环")
+                for i in range(run_count):
+                    current_percent = int((i / run_count) * 100)
+                    print(f"DEBUG: 第 {i+1}/{run_count} 次循环 ({current_percent}%)")
                     
                     if i != 0:
                         sleep_time = random.randint(60, 120)
                         print(f"DEBUG: 等待 {sleep_time} 秒...")
+                        self.write_log_to_Text(f"INFO: 等待{sleep_time}秒后继续...")
                         time.sleep(sleep_time)
                     
-                    # 使用新的代理API格式
-                    proxy_api_url = 'http://bapi.51daili.com/getapi2?linePoolIndex=-1&packid=2&time=1&qty=1&port=1&format=txt&dt=2&dtc=1&usertype=17&uid=59521'
+                    # 使用GUI输入的代理地址
                     print(f"DEBUG: 请求代理API: {proxy_api_url}")
                     
                     proxies = self.jl_api(proxy_api_url)
@@ -99,6 +219,8 @@ class MY_GUI():
                         self.write_log_to_Text(f"WARNING: 第{i+1}次 - 获取代理失败，跳过本次")
                         print(f"DEBUG: 第{i+1}次 - 代理获取失败")
                         self.progressbarOne['value'] += 1
+                        current_percent = int(((i + 1) / run_count) * 100)
+                        self.progress_label.config(text=f"{current_percent}%")
                         self.init_window_name.update()
                         continue
                     
@@ -112,10 +234,12 @@ class MY_GUI():
                         print(f"DEBUG: 第{i+1}次 - 失败")
                     
                     self.progressbarOne['value'] += 1
+                    current_percent = int(((i + 1) / run_count) * 100)
+                    self.progress_label.config(text=f"{current_percent}%")
                     self.init_window_name.update()
-                    self.write_log_to_Text("INFO: 进度 {}/35, 已成功{}次".format(i+1, suc_num))
+                    self.write_log_to_Text("INFO: 进度 {}/{} ({}%), 已成功{}次".format(i+1, run_count, current_percent, suc_num))
                     
-                    if i == 34:
+                    if i == run_count - 1:
                         self.write_log_to_Text("SUCCESS: 任务完成，总共成功{}次".format(suc_num))
                         print("DEBUG: 任务完成")
                         
@@ -123,6 +247,10 @@ class MY_GUI():
                 error_msg = f"ERROR: 运行过程中发生异常: {str(e)}"
                 print(error_msg)
                 self.write_log_to_Text(error_msg)
+            finally:
+                # 重新启用按钮
+                self.str_trans_to_md5_button.config(state='normal')
+                self.white_ip_button.config(state='normal')
         else:
             error_msg = "ERROR: 无效的分享链接，请检查链接格式"
             print(f"DEBUG: {error_msg}")
