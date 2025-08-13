@@ -1,0 +1,127 @@
+name: Momo Share Automation
+
+on:
+  schedule:
+    # 每天执行4次：6:30、12:30、18:30、0:30（北京时间）
+    - cron: '30 22,4,10,16 * * *'
+  workflow_dispatch:
+    inputs:
+      proxy_count:
+        description: 'Number of proxies to use (default: 50)'
+        required: false
+        default: '50'
+      debug_mode:
+        description: 'Enable debug mode'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  PYTHON_VERSION: '3.9'
+  MAX_PROXY_COUNT: ${{ github.event.inputs.proxy_count || '50' }}
+  DEBUG_MODE: ${{ github.event.inputs.debug_mode || 'false' }}
+
+jobs:
+  momo-share:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Set timezone
+        run: sudo timedatectl set-timezone 'Asia/Shanghai'
+        
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            
+      - name: Install dependencies
+        run: |
+          cd auto-momo
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Run proxy collection
+        id: proxy_collection
+        run: |
+          cd auto-momo
+          python -c "
+          import sys
+          import logging
+          from ip import ip_main
+          logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+          try:
+              ip_main()
+              print('Proxy collection completed successfully')
+          except Exception as e:
+              print(f'Proxy collection failed: {e}', file=sys.stderr)
+              sys.exit(1)
+          "
+          
+      - name: Run momo share
+        id: momo_share
+        env:
+          MOMO_LINK: ${{ secrets.MOMO_LINK }}
+          MAX_PROXY_COUNT: ${{ env.MAX_PROXY_COUNT }}
+          DEBUG_MODE: ${{ env.DEBUG_MODE }}
+        run: |
+          cd auto-momo
+          python -c "
+          import os
+          import sys
+          import logging
+          from momo import main
+          
+          if not os.environ.get('MOMO_LINK'):
+              print('Error: MOMO_LINK environment variable is not set', file=sys.stderr)
+              sys.exit(1)
+              
+          logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+          try:
+              main()
+              print('Momo share completed successfully')
+          except Exception as e:
+              print(f'Momo share failed: {e}', file=sys.stderr)
+              sys.exit(1)
+          "
+          
+      - name: Update execution log
+        run: |
+          echo "Last execution: $(date '+%Y-%m-%d %H:%M:%S %Z')" > last_execution.log
+          echo "Proxy count: ${{ env.MAX_PROXY_COUNT }}" >> last_execution.log
+          
+      - name: Commit execution log
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add last_execution.log
+          git diff --staged --quiet || git commit -m "Update execution log [skip ci]"
+          
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          
+      - name: Upload execution artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: execution-logs-${{ github.run_number }}
+          path: |
+            *.log
+            auto-momo/*.log
+          retention-days: 7

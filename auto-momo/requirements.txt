@@ -1,2 +1,3 @@
-aiohttp
-lxml
+aiohttp>=3.8.0
+lxml>=4.9.0
+asyncio-throttle>=1.0.0
