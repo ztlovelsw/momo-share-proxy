@@ -74,7 +74,7 @@ class MY_GUI():
         # 代理地址输入
         Label(config_frame, text="代理地址：", font=('Arial', 10), bg='#f0f0f0').grid(row=0, column=0, sticky='w')
         self.proxy_url_var = tkinter.StringVar(
-            value="http://bapi.51daili.com/getapi2?linePoolIndex=-1&packid=2&time=1&qty=1&port=1&format=txt&dt=2&dtc=1&usertype=17&uid=59521"
+            value=""
         )
         self.proxy_url_entry = Entry(config_frame, textvariable=self.proxy_url_var,
                                    width=60, font=('Arial', 9), relief='solid', borderwidth=1)
@@ -321,7 +321,7 @@ class MY_GUI():
             self.write_log_to_Text(f"INFO: 检测到本地IP: {local_ip}")
             
             # 构建白名单API URL
-            white_api = f"http://aapi.51daili.com/whiteIP-list?op=add&appkey=DAD44680B293374839DCE7B55FADEB5259521&whiteip={local_ip}"
+            white_api = f"http://aapi.51daili.com/whiteIP-list?op=add&appkey=51代理网站获取&whiteip={local_ip}"
             print(f"DEBUG: 白名单API: {white_api}")
             
             response = requests.get(white_api, timeout=10)
